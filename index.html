@@ -3,18 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>よっ友メモ - Friend Memo</title>
-    
+    <title>ゆるカルテ - サロン向け顧客メモ</title>
+
     <link rel="icon" href="./icon.png">
     <link rel="apple-touch-icon" sizes="180x180" href="./icon.png">
 
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="よっ友メモ">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="ゆるカルテ">
     
-    <!-- Tailwind CSS (CDN) -->
+    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
     
     <script>
@@ -23,8 +25,15 @@
                 extend: {
                     fontFamily: { sans: ['"Noto Sans JP"', 'sans-serif'] },
                     colors: {
-                        pastel: {
-                            bg: '#FDFBF7', primary: '#A5B4FC', secondary: '#FDA4AF', surface: '#FFFFFF', text: '#475569',
+                        yuru: {
+                            bg: '#FFF6F8',       // ほんのり桜色 (背景)
+                            main: '#C88691',     // ダスティピンク (メイン)
+                            accent: '#E4A0B7',   // アクセントピンク
+                            sub: '#9C8A8E',      // モーブグレー (サブ)
+                            text: '#4D3B40',     // ダークモーブ (文字)
+                            card: '#FFFFFF',     // 白 (カード)
+                            alert: '#C96868',    // 落ち着いた赤 (注意)
+                            border: '#EEDCE0'    // 枠線用
                         }
                     }
                 }
@@ -32,603 +41,1109 @@
         }
     </script>
     <style>
-        /* UI調整 */
+        body { -webkit-tap-highlight-color: transparent; background-color: #FFF6F8; color: #4D3B40; }
         ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-thumb { background-color: #CBD5E1; border-radius: 3px; }
-        .emoji-radio:checked + label { background-color: #E0E7FF; border-color: #A5B4FC; transform: scale(1.1); }
-        .view-btn.active { background-color: #E0E7FF; color: #6366F1; }
-        /* モーダル表示時の背景固定 */
+        ::-webkit-scrollbar-thumb { background-color: #E4A0B7; border-radius: 4px; }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        /* 画面切り替え用 */
+        .view-section { display: none; animation: fadeIn 0.2s ease-out; }
+        .view-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+        
         body.modal-open { overflow: hidden; }
-        /* スムーズな操作感 */
-        body { -webkit-tap-highlight-color: transparent; }
+        
+        /* カスタム入力スタイル */
+        .yuru-input {
+            width: 100%; padding: 0.75rem 1rem; border-radius: 0.75rem; border: 1px solid #EEDCE0; background-color: #FFFFFF;
+            transition: all 0.2s; font-size: 0.95rem;
+        }
+        .yuru-input:focus { outline: none; border-color: #C88691; box-shadow: 0 0 0 3px rgba(200, 134, 145, 0.1); }
+        .yuru-label { display: block; font-size: 0.75rem; font-weight: 700; color: #9C8A8E; margin-bottom: 0.25rem; }
     </style>
 </head>
-<body class="bg-pastel-bg text-pastel-text font-sans antialiased min-h-screen pb-24 relative safe-area-inset-bottom">
+<body class="font-sans antialiased min-h-screen pb-24 safe-area-inset-bottom">
 
-    <!-- ヘッダー -->
-    <header class="sticky top-0 z-40 bg-white/90 backdrop-blur-md shadow-sm border-b border-gray-100">
+    <!-- 共通ヘッダー -->
+    <header class="sticky top-0 z-40 bg-yuru-bg/90 backdrop-blur-md shadow-sm border-b border-yuru-border">
         <div class="max-w-md mx-auto px-4 py-3 flex justify-between items-center">
-            <h1 class="text-xl font-bold text-indigo-500 flex items-center gap-2 select-none" onclick="window.scrollTo({top:0, behavior:'smooth'})">
-                <span>🎓</span> よっ友メモ
+            <h1 class="text-xl font-bold text-yuru-main flex items-center gap-2 select-none cursor-pointer" onclick="App.navigate('home')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6l10-4 10 4M2 6v12l10 4 10-4V6M12 2v20"/></svg>
+                ゆるカルテ
             </h1>
-            <div class="flex gap-2">
-                <!-- データ管理ボタン -->
-                <button id="dataMenuBtn" class="text-gray-500 hover:text-indigo-600 bg-gray-50 hover:bg-indigo-50 px-3 py-1.5 rounded-full transition flex items-center gap-1 text-xs font-bold border border-gray-200">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                    </svg>
+            <div class="flex gap-2" id="header-actions">
+                <button onclick="App.openDataModal()" class="text-yuru-sub hover:text-yuru-main bg-white px-3 py-1.5 rounded-full transition flex items-center gap-1 text-xs font-bold border border-yuru-border shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                     データ
                 </button>
-                <button id="toggleFormBtn" class="text-sm bg-indigo-100 text-indigo-600 px-3 py-1.5 rounded-full hover:bg-indigo-200 transition font-medium">
-                    ＋ 新規
+                <button onclick="App.navigate('customer-form')" class="text-sm bg-yuru-main text-white px-3 py-1.5 rounded-full hover:bg-opacity-90 transition font-bold shadow-sm">
+                    ＋ 顧客追加
                 </button>
             </div>
         </div>
     </header>
 
-    <main class="max-w-md mx-auto px-4 py-6 space-y-6">
+    <main class="max-w-md mx-auto px-4 py-5">
 
-        <!-- 登録・編集フォームエリア -->
-        <section id="formSection" class="bg-white rounded-2xl shadow-lg p-5 border border-indigo-50 hidden transition-all duration-300 transform origin-top">
-            <h2 class="text-lg font-bold mb-4 text-gray-700 flex justify-between items-center">
-                <span id="formTitle">友達を登録</span>
-                <button type="button" id="closeFormBtn" class="text-gray-400 hover:text-gray-600 p-1">✕</button>
-            </h2>
-            
-            <form id="friendForm" class="space-y-4">
-                <input type="hidden" id="editId">
+        <!-- ========================================== -->
+        <!-- VIEW: ホーム（顧客一覧） -->
+        <!-- ========================================== -->
+        <section id="view-home" class="view-section active space-y-5">
+            <!-- 検索 -->
+            <div class="relative">
+                <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-yuru-sub">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                </span>
+                <input type="text" id="searchInput" placeholder="お名前、顧客ID、タグ、部位で検索..." class="w-full pl-10 pr-4 py-3 bg-white border border-yuru-border rounded-xl shadow-sm focus:outline-none focus:border-yuru-main transition text-sm">
+            </div>
 
-                <!-- アイコン選択 -->
-                <div>
-                    <label class="block text-sm font-bold mb-2 text-gray-600">イメージ絵文字</label>
-                    <div class="flex items-center gap-3 mb-3">
-                        <input type="text" id="emojiManualInput" class="w-16 h-16 text-3xl text-center bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-300 transition" placeholder="😊" maxlength="2">
-                        <div class="text-xs text-gray-400">
-                            <span class="font-bold text-indigo-400">←</span> リスト選択または<br>直接入力
-                        </div>
-                    </div>
-                    <div class="grid grid-cols-6 gap-2" id="emojiGrid"></div>
+            <!-- タグフィルタ -->
+            <div class="overflow-x-auto pb-2 -mx-4 px-4 hide-scrollbar">
+                <div class="flex gap-2" id="tagFilterContainer">
+                    <!-- JSで描画 -->
+                </div>
+            </div>
+
+            <!-- リスト -->
+            <div>
+                <div class="flex justify-between items-end mb-3">
+                    <h2 class="font-bold text-yuru-text text-sm flex items-center gap-2">
+                        顧客リスト <span id="customerCountBadge" class="bg-yuru-accent/20 text-yuru-alert px-2 py-0.5 rounded-full text-[10px]">0名</span>
+                    </h2>
+                </div>
+                <ul id="customerList" class="space-y-3 pb-10">
+                    <!-- JSで描画 -->
+                </ul>
+                <div id="emptyState" class="hidden text-center py-12">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="mx-auto text-yuru-border mb-3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    <p class="text-yuru-sub font-medium text-sm">顧客データがありません<br>「＋ 顧客追加」から登録してください</p>
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- VIEW: 顧客詳細 -->
+        <!-- ========================================== -->
+        <section id="view-customer-detail" class="view-section space-y-4 pb-10">
+            <div class="flex items-center gap-3 mb-2">
+                <button onclick="App.navigate('home')" class="p-2 -ml-2 text-yuru-sub hover:text-yuru-text rounded-full hover:bg-yuru-border/50">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+                </button>
+                <h2 class="font-bold text-lg text-yuru-text flex-1">お客様カルテ</h2>
+                <button id="btnEditCustomer" class="text-xs font-bold bg-white text-yuru-main border border-yuru-main/30 px-3 py-1.5 rounded-full">
+                    編集
+                </button>
+            </div>
+
+            <!-- 基本情報カード -->
+            <div id="detailBasicCard" class="bg-white rounded-2xl p-5 shadow-sm border border-yuru-border relative">
+                <!-- JSで描画 -->
+            </div>
+
+            <!-- クイックアクション -->
+            <div class="grid grid-cols-2 gap-3">
+                <button id="btnAddVisit" class="bg-yuru-main text-white py-3 rounded-xl font-bold text-sm shadow-sm flex items-center justify-center gap-2 hover:bg-opacity-90 active:scale-95 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                    施術メモを書く
+                </button>
+                <button id="btnAddAppt" class="bg-white text-yuru-main border border-yuru-main py-3 rounded-xl font-bold text-sm shadow-sm flex items-center justify-center gap-2 hover:bg-yuru-bg active:scale-95 transition">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    次回予約を取る
+                </button>
+            </div>
+
+            <!-- 予約情報 -->
+            <div id="detailApptContainer" class="hidden">
+                <h3 class="text-xs font-bold text-yuru-sub mb-2 ml-1 flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    次回予約
+                </h3>
+                <div id="detailApptCard" class="bg-[#FFF0F3] border border-[#F2D5D9] rounded-xl p-4 shadow-sm">
+                    <!-- JSで描画 -->
+                </div>
+            </div>
+
+            <!-- 施術履歴 -->
+            <div>
+                <h3 class="text-xs font-bold text-yuru-sub mb-2 ml-1 flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                    施術履歴
+                </h3>
+                <div id="detailVisitList" class="space-y-3">
+                    <!-- JSで描画 -->
+                </div>
+            </div>
+        </section>
+
+
+        <!-- ========================================== -->
+        <!-- VIEW: 顧客登録 / 編集 -->
+        <!-- ========================================== -->
+        <section id="view-customer-form" class="view-section">
+            <div class="flex items-center gap-3 mb-4">
+                <button onclick="App.navigate('home')" class="p-2 -ml-2 text-yuru-sub hover:text-yuru-text rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+                <h2 id="customerFormTitle" class="font-bold text-lg text-yuru-text">顧客を登録</h2>
+            </div>
+
+            <form id="customerForm" class="bg-white p-5 rounded-2xl shadow-sm border border-yuru-border space-y-4">
+                <input type="hidden" id="c_id">
+
+                <div class="bg-yuru-bg p-3 rounded-xl border border-yuru-main/20">
+                    <label class="yuru-label flex items-center gap-1">顧客ID・番号 <span class="text-yuru-alert">*</span></label>
+                    <input type="text" id="c_code" required placeholder="例: 001" class="yuru-input bg-white">
+                    <p class="text-[10px] text-yuru-sub mt-1">※この項目のみ必須です。</p>
                 </div>
 
-                <!-- 名前 & ニックネーム -->
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 mb-1">名前 <span class="text-red-400">*</span></label>
-                        <input type="text" id="nameInput" placeholder="山田 太郎" required class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition">
+                        <label class="yuru-label">呼び名・名前</label>
+                        <input type="text" id="c_name" placeholder="山田さん" class="yuru-input">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-500 mb-1">あだ名</label>
-                        <input type="text" id="nicknameInput" placeholder="たろちゃん" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition">
+                        <label class="yuru-label">フリガナ</label>
+                        <input type="text" id="c_kana" placeholder="ヤマダ" class="yuru-input">
                     </div>
                 </div>
 
-                <!-- 特徴 -->
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1">特徴</label>
-                    <input type="text" id="featureInput" placeholder="いつも帽子をかぶってる" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="yuru-label">性別</label>
+                        <select id="c_gender" class="yuru-input">
+                            <option value="unknown">未設定</option>
+                            <option value="female">女性</option>
+                            <option value="male">男性</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="yuru-label">年代・メモ</label>
+                        <input type="text" id="c_age" placeholder="40代前半" class="yuru-input">
+                    </div>
                 </div>
 
-                <!-- タグ -->
+                <hr class="border-yuru-border">
+
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1">タグ（カンマ区切り）</label>
-                    <input type="text" id="tagsInput" placeholder="サークル, 学部" class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition">
+                    <label class="yuru-label">見た目の特徴</label>
+                    <input type="text" id="c_appearance" placeholder="ショートヘア、眼鏡" class="yuru-input">
+                </div>
+                <div>
+                    <label class="yuru-label">性格・雰囲気</label>
+                    <input type="text" id="c_personality" placeholder="おしゃべり好き、明るい" class="yuru-input">
+                </div>
+                <div>
+                    <label class="yuru-label text-yuru-main">施術の好み</label>
+                    <textarea id="c_preference" rows="2" placeholder="強めが好き、オイルより指圧派" class="yuru-input"></textarea>
+                </div>
+                <div>
+                    <label class="yuru-label text-yuru-alert">注意点・NG</label>
+                    <textarea id="c_caution" rows="2" placeholder="右肩に痛みあり、うつ伏せ苦手" class="yuru-input border-yuru-alert/30"></textarea>
                 </div>
 
-                <!-- メモ -->
                 <div>
-                    <label class="block text-xs font-bold text-gray-500 mb-1">メモ</label>
-                    <textarea id="memoInput" rows="3" placeholder="詳細メモ..." class="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-300 transition"></textarea>
+                    <label class="yuru-label">タグ（カンマ区切り）</label>
+                    <input type="text" id="c_tags" placeholder="常連, 足つぼ, 紹介" class="yuru-input">
+                    <div class="mt-2 flex flex-wrap gap-1" id="c_tag_hints">
+                        <!-- JSでよく使うタグを挿入 -->
+                    </div>
                 </div>
 
-                <!-- ボタンエリア -->
-                <div class="flex gap-3 pt-2">
-                    <button type="button" id="cancelBtn" class="flex-1 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition">クリア</button>
-                    <button type="submit" id="saveBtn" class="flex-2 w-full py-3 bg-indigo-400 text-white rounded-xl font-bold shadow-md hover:bg-indigo-500 transition transform active:scale-95">保存する</button>
+                <div class="pt-4 flex gap-3">
+                    <button type="button" onclick="App.navigate('home')" class="flex-1 py-3 bg-yuru-bg text-yuru-text rounded-xl font-bold border border-yuru-border">キャンセル</button>
+                    <button type="submit" class="flex-2 w-full py-3 bg-yuru-main text-white rounded-xl font-bold shadow-md">保存する</button>
                 </div>
                 
-                <!-- 削除ボタン -->
-                <div id="deleteBtnArea" class="mt-4 pt-4 border-t border-gray-100 hidden">
-                    <button type="button" id="deleteFromFormBtn" class="w-full py-2 text-red-400 hover:text-red-600 font-bold text-sm transition flex items-center justify-center gap-1">この友達を削除</button>
+                <div id="customerDeleteArea" class="hidden pt-4 mt-2 border-t border-yuru-border text-center">
+                    <button type="button" id="btnDeleteCustomer" class="text-sm font-bold text-yuru-alert py-2 px-4 rounded hover:bg-red-50">この顧客を削除する</button>
                 </div>
             </form>
         </section>
 
-        <!-- 検索・フィルタ -->
-        <section class="space-y-3">
-            <div class="relative">
-                <span class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400">🔍</span>
-                <input type="text" id="searchInput" placeholder="検索..." class="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-full shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-300 transition text-sm">
-            </div>
-            <div class="overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-                <div class="flex gap-2" id="tagFilterContainer">
-                    <button class="px-4 py-1.5 rounded-full text-xs font-bold bg-gray-700 text-white whitespace-nowrap transition" data-tag="ALL">すべて</button>
-                </div>
-            </div>
-        </section>
 
-        <!-- 友達リスト -->
-        <section>
-            <div class="flex justify-between items-center mb-3">
-                <h3 class="font-bold text-gray-500 text-sm">登録リスト <span id="countBadge" class="ml-1 bg-indigo-100 text-indigo-600 px-2 py-0.5 rounded-full text-xs">0人</span></h3>
-                <div class="flex bg-gray-100 p-0.5 rounded-lg border border-gray-200">
-                    <button id="viewListBtn" class="view-btn active px-2 py-1 rounded-md text-gray-400 hover:text-gray-600 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg></button>
-                    <button id="viewGridBtn" class="view-btn px-2 py-1 rounded-md text-gray-400 hover:text-gray-600 transition"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg></button>
-                </div>
+        <!-- ========================================== -->
+        <!-- VIEW: 施術メモ登録 -->
+        <!-- ========================================== -->
+        <section id="view-visit-form" class="view-section">
+            <div class="flex items-center gap-3 mb-4">
+                <button onclick="App.navigate('customer-detail', {id: App.state.currentCustomerId})" class="p-2 -ml-2 text-yuru-sub hover:text-yuru-text rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+                <h2 class="font-bold text-lg text-yuru-text">施術メモを書く</h2>
             </div>
             
-            <ul id="friendList" class="space-y-4 pb-20"></ul>
+            <p id="v_target_name" class="text-sm font-bold text-yuru-main mb-3 ml-1">対象: 読み込み中...</p>
 
-            <div id="emptyState" class="hidden text-center py-10">
-                <div class="text-4xl mb-3">🍃</div>
-                <p class="text-gray-400 font-medium">データがありません</p>
-            </div>
+            <form id="visitForm" class="bg-white p-5 rounded-2xl shadow-sm border border-yuru-border space-y-4">
+                <input type="hidden" id="v_id">
+
+                <div>
+                    <label class="yuru-label">施術日 <span class="text-yuru-alert">*</span></label>
+                    <input type="date" id="v_date" required class="yuru-input">
+                </div>
+
+                <div class="grid grid-cols-5 gap-3">
+                    <div class="col-span-3">
+                        <label class="yuru-label">コース名</label>
+                        <input type="text" id="v_course" placeholder="ボディ" class="yuru-input">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="yuru-label">時間（分）</label>
+                        <input type="number" id="v_duration" placeholder="60" min="1" step="1" class="yuru-input text-right">
+                    </div>
+                </div>
+                <div class="flex gap-1.5 justify-end">
+                    <button type="button" onclick="document.getElementById('v_duration').value='30'" class="text-[10px] bg-yuru-bg border border-yuru-border text-yuru-text px-3 py-1.5 rounded-lg hover:bg-[#F2D5D9] transition shadow-sm">30分</button>
+                    <button type="button" onclick="document.getElementById('v_duration').value='45'" class="text-[10px] bg-yuru-bg border border-yuru-border text-yuru-text px-3 py-1.5 rounded-lg hover:bg-[#F2D5D9] transition shadow-sm">45分</button>
+                    <button type="button" onclick="document.getElementById('v_duration').value='60'" class="text-[10px] bg-yuru-bg border border-yuru-border text-yuru-text px-3 py-1.5 rounded-lg hover:bg-[#F2D5D9] transition shadow-sm">60分</button>
+                    <button type="button" onclick="document.getElementById('v_duration').value='120'" class="text-[10px] bg-yuru-bg border border-yuru-border text-yuru-text px-3 py-1.5 rounded-lg hover:bg-[#F2D5D9] transition shadow-sm">120分</button>
+                </div>
+
+                <div>
+                    <label class="yuru-label">強さの好み</label>
+                    <div class="flex gap-2">
+                        <label class="flex-1 text-center"><input type="radio" name="v_pressure" value="soft" class="sr-only peer"><div class="p-2 text-sm border rounded-lg peer-checked:bg-yuru-main peer-checked:text-white peer-checked:border-yuru-main cursor-pointer">弱め</div></label>
+                        <label class="flex-1 text-center"><input type="radio" name="v_pressure" value="normal" class="sr-only peer" checked><div class="p-2 text-sm border rounded-lg peer-checked:bg-yuru-main peer-checked:text-white peer-checked:border-yuru-main cursor-pointer">普通</div></label>
+                        <label class="flex-1 text-center"><input type="radio" name="v_pressure" value="strong" class="sr-only peer"><div class="p-2 text-sm border rounded-lg peer-checked:bg-yuru-main peer-checked:text-white peer-checked:border-yuru-main cursor-pointer">強め</div></label>
+                        <label class="flex-1 text-center"><input type="radio" name="v_pressure" value="veryStrong" class="sr-only peer"><div class="p-2 text-sm border rounded-lg peer-checked:bg-yuru-main peer-checked:text-white peer-checked:border-yuru-main cursor-pointer">ゴリゴリ</div></label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="yuru-label">重点部位 (カンマ区切り)</label>
+                    <input type="text" id="v_focus" placeholder="首, 肩, ふくらはぎ" class="yuru-input">
+                    <div class="mt-2 flex flex-wrap gap-1" id="v_focus_hints">
+                        <!-- JSで挿入 -->
+                    </div>
+                </div>
+
+                <div>
+                    <label class="yuru-label">体の状態・施術内容</label>
+                    <textarea id="v_treatment" rows="3" placeholder="右肩甲骨周りが特に硬い。重点的にほぐした。" class="yuru-input"></textarea>
+                </div>
+                
+                <div>
+                    <label class="yuru-label">会話・プライベートメモ</label>
+                    <textarea id="v_conversation" rows="2" placeholder="来週ハワイ旅行に行くらしい" class="yuru-input"></textarea>
+                </div>
+
+                <div class="bg-[#FFF0F3] p-3 rounded-xl border border-[#F2D5D9]">
+                    <label class="yuru-label text-yuru-main">次回への引き継ぎメモ</label>
+                    <textarea id="v_next_hint" rows="2" placeholder="次回は足つぼを長めに提案する" class="yuru-input bg-white"></textarea>
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <button type="button" onclick="App.navigate('customer-detail', {id: App.state.currentCustomerId})" class="flex-1 py-3 bg-yuru-bg text-yuru-text rounded-xl font-bold border border-yuru-border">キャンセル</button>
+                    <button type="submit" class="flex-2 w-full py-3 bg-yuru-main text-white rounded-xl font-bold shadow-md">記録する</button>
+                </div>
+                
+                 <div id="visitDeleteArea" class="hidden pt-4 mt-2 border-t border-yuru-border text-center">
+                    <button type="button" id="btnDeleteVisit" class="text-sm font-bold text-yuru-alert py-2 px-4 rounded hover:bg-red-50">この履歴を削除する</button>
+                </div>
+            </form>
         </section>
+
+
+        <!-- ========================================== -->
+        <!-- VIEW: 予約登録 -->
+        <!-- ========================================== -->
+        <section id="view-appointment-form" class="view-section">
+            <div class="flex items-center gap-3 mb-4">
+                <button onclick="App.navigate('customer-detail', {id: App.state.currentCustomerId})" class="p-2 -ml-2 text-yuru-sub hover:text-yuru-text rounded-full"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 19l-7-7 7-7"/></svg></button>
+                <h2 class="font-bold text-lg text-yuru-text">次回予約を取る</h2>
+            </div>
+
+            <p id="a_target_name" class="text-sm font-bold text-yuru-main mb-3 ml-1">対象: 読み込み中...</p>
+
+            <form id="apptForm" class="bg-white p-5 rounded-2xl shadow-sm border border-yuru-border space-y-4">
+                <input type="hidden" id="a_id">
+
+                <div>
+                    <label class="yuru-label">予約日時 <span class="text-yuru-alert">*</span></label>
+                    <input type="datetime-local" id="a_date" required class="yuru-input">
+                </div>
+
+                <div class="grid grid-cols-5 gap-3">
+                    <div class="col-span-3">
+                        <label class="yuru-label">予定コース名</label>
+                        <input type="text" id="a_course" placeholder="足つぼ" class="yuru-input">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="yuru-label">時間（分）</label>
+                        <input type="number" id="a_duration" placeholder="60" min="1" step="1" class="yuru-input text-right">
+                    </div>
+                </div>
+                <div class="flex gap-1.5 justify-end">
+                    <button type="button" onclick="document.getElementById('a_duration').value='30'" class="text-[10px] bg-yuru-bg border border-yuru-border text-yuru-text px-3 py-1.5 rounded-lg hover:bg-[#F2D5D9] transition shadow-sm">30分</button>
+                    <button type="button" onclick="document.getElementById('a_duration').value='45'" class="text-[10px] bg-yuru-bg border border-yuru-border text-yuru-text px-3 py-1.5 rounded-lg hover:bg-[#F2D5D9] transition shadow-sm">45分</button>
+                    <button type="button" onclick="document.getElementById('a_duration').value='60'" class="text-[10px] bg-yuru-bg border border-yuru-border text-yuru-text px-3 py-1.5 rounded-lg hover:bg-[#F2D5D9] transition shadow-sm">60分</button>
+                    <button type="button" onclick="document.getElementById('a_duration').value='120'" class="text-[10px] bg-yuru-bg border border-yuru-border text-yuru-text px-3 py-1.5 rounded-lg hover:bg-[#F2D5D9] transition shadow-sm">120分</button>
+                </div>
+
+                <div>
+                    <label class="yuru-label">予約メモ</label>
+                    <textarea id="a_memo" rows="2" placeholder="誕生月割引を適用予定" class="yuru-input"></textarea>
+                </div>
+
+                <div>
+                    <label class="yuru-label">ステータス</label>
+                    <select id="a_status" class="yuru-input">
+                        <option value="scheduled">予約中（予定）</option>
+                        <option value="done">来店済み</option>
+                        <option value="cancelled">キャンセル</option>
+                        <option value="noShow">無断キャンセル</option>
+                    </select>
+                </div>
+
+                <div class="pt-4 flex gap-3">
+                    <button type="button" onclick="App.navigate('customer-detail', {id: App.state.currentCustomerId})" class="flex-1 py-3 bg-yuru-bg text-yuru-text rounded-xl font-bold border border-yuru-border">キャンセル</button>
+                    <button type="submit" class="flex-2 w-full py-3 bg-yuru-main text-white rounded-xl font-bold shadow-md">予約を保存</button>
+                </div>
+                
+                 <div id="apptDeleteArea" class="hidden pt-4 mt-2 border-t border-yuru-border text-center">
+                    <button type="button" id="btnDeleteAppt" class="text-sm font-bold text-yuru-alert py-2 px-4 rounded hover:bg-red-50">この予約を削除する</button>
+                </div>
+            </form>
+        </section>
+
     </main>
 
-    <!-- FAB -->
-    <button id="fabBtn" class="fixed bottom-6 right-6 bg-indigo-500 hover:bg-indigo-600 text-white rounded-full p-4 shadow-xl transition transform hover:scale-110 md:hidden z-30 active:scale-95">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-        </svg>
-    </button>
-
+    <!-- ========================================== -->
     <!-- データ管理モーダル -->
-    <div id="dataModal" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
-        <!-- 背景オーバーレイ -->
-        <div id="dataModalOverlay" class="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity"></div>
+    <!-- ========================================== -->
+    <div id="modal-data" class="fixed inset-0 z-50 hidden flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-yuru-text/40 backdrop-blur-sm" onclick="App.closeDataModal()"></div>
         
-        <!-- モーダルコンテンツ -->
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm relative z-10 overflow-hidden animate-fade-in-up">
-            <div class="bg-indigo-50 p-4 border-b border-indigo-100 flex justify-between items-center">
-                <h3 class="font-bold text-indigo-800 flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4"></path></svg>
+        <div class="bg-white rounded-2xl w-full max-w-sm relative z-10 overflow-hidden shadow-xl animate-[fadeIn_0.2s_ease-out]">
+            <div class="bg-yuru-bg p-4 border-b border-yuru-border flex justify-between items-center">
+                <h3 class="font-bold text-yuru-text flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
                     データ管理
                 </h3>
-                <button id="closeDataModalBtn" class="text-gray-400 hover:text-gray-600 p-1 bg-white rounded-full">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                <button onclick="App.closeDataModal()" class="text-yuru-sub hover:text-yuru-text p-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                 </button>
             </div>
             
-            <div class="p-5 space-y-6">
-                <!-- エクスポート -->
-                <div>
-                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">書き出し（バックアップ）</h4>
-                    <div class="grid grid-cols-2 gap-3">
-                        <button id="copyJsonBtn" class="flex flex-col items-center justify-center gap-2 p-3 bg-gray-50 border border-gray-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition text-gray-600">
-                            <svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
-                            <span class="text-xs font-bold">コピー</span>
-                        </button>
-                        <button id="downloadJsonBtn" class="flex flex-col items-center justify-center gap-2 p-3 bg-gray-50 border border-gray-200 rounded-xl hover:bg-indigo-50 hover:border-indigo-200 transition text-gray-600">
-                            <svg class="w-6 h-6 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                            <span class="text-xs font-bold">ファイル保存</span>
-                        </button>
-                    </div>
+            <div class="p-5 space-y-5">
+                <div class="bg-[#FFF0F3] border border-[#F2D5D9] p-3 rounded-xl text-xs text-yuru-text leading-relaxed">
+                    <strong class="text-yuru-main mb-1 block">このアプリについて</strong>
+                    このアプリはスマートフォンでの利用に最適化されています（モバイルファースト）。<br>
+                    ブラウザからいつでもサッと開いてご利用いただけます。
                 </div>
 
-                <!-- インポート -->
-                <div>
-                    <h4 class="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">読み込み（復元）</h4>
-                    <div class="bg-yellow-50 border border-yellow-100 rounded-lg p-3 mb-3 flex gap-2 items-start">
-                        <svg class="w-5 h-5 text-yellow-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                        <p class="text-[10px] text-yellow-800 leading-tight">
-                            JSONファイルを読み込みます。<br>
-                            データ形式が正しくない場合、読み込みはキャンセルされます。
-                        </p>
-                    </div>
-                    <input type="file" id="importInput" accept=".json,application/json" class="hidden">
-                    <button id="importBtn" class="w-full py-3 border-2 border-dashed border-indigo-200 rounded-xl text-indigo-500 font-bold hover:bg-indigo-50 hover:border-indigo-400 transition flex items-center justify-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                <div class="bg-[#FFF0F3] border border-[#F2D5D9] p-3 rounded-xl text-xs text-yuru-text leading-relaxed">
+                    <strong class="text-yuru-main mb-1 block">プライバシーと保存について</strong>
+                    このアプリのデータは外部サーバーには送信されず、お使いの端末（ブラウザ）内に保存されます。<br>
+                    <span class="text-yuru-alert font-bold">※ブラウザの履歴やサイトデータを削除すると消える可能性があります。</span>定期的なバックアップ（ファイル保存）をおすすめします。
+                </div>
+
+                <div class="flex justify-between items-center text-sm font-bold text-yuru-sub px-2">
+                    <span>データ件数:</span>
+                    <span id="dataCountText">計算中...</span>
+                </div>
+
+                <div class="space-y-3">
+                    <h4 class="text-xs font-bold text-yuru-sub">バックアップを作成</h4>
+                    <button onclick="App.exportData()" class="w-full py-3 bg-white border-2 border-yuru-main text-yuru-main rounded-xl font-bold hover:bg-yuru-bg transition flex justify-center items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                        ファイルとして保存 (JSON)
+                    </button>
+                </div>
+
+                <div class="space-y-3 pt-2 border-t border-yuru-border">
+                    <h4 class="text-xs font-bold text-yuru-sub">バックアップを復元</h4>
+                    <input type="file" id="importInput" accept=".json,application/json" class="hidden" onchange="App.importData(event)">
+                    <button onclick="document.getElementById('importInput').click()" class="w-full py-3 bg-white border border-yuru-sub text-yuru-sub rounded-xl font-bold hover:bg-gray-50 transition flex justify-center items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
                         ファイルを選択して読み込む
                     </button>
                 </div>
             </div>
-            
-            <div class="bg-gray-50 p-3 text-center border-t border-gray-100">
-                <p class="text-[10px] text-gray-400">Version 1.1.1 - Icon Update</p>
-            </div>
         </div>
     </div>
 
+    <!-- ========================================== -->
+    <!-- アプリケーションロジック -->
+    <!-- ========================================== -->
     <script>
-        // --- 設定・定数 ---
-        const EMOJI_LIST = ['😊', '😎', '🤓', '🤠', '🥳', '🧐', '😴', '🤔', '😇', '🥺', '😂', '😷', '🎓', '⚽', '🎸', '💻', '🎨', '✈️'];
-        const STORAGE_KEY = 'yottomo_friends_db';
+        // UUID Polyfill
+        function uuidv4() {
+            return ([1e7]+-1e3+-4e3+-8e3+-1e11).replace(/[018]/g, c =>
+                (c ^ crypto.getRandomValues(new Uint8Array(1))[0] & 15 >> c / 4).toString(16)
+            );
+        }
 
-        // --- 状態管理 ---
-        let friends = [];
-        let currentFilterTag = 'ALL';
-        let searchQuery = '';
-        let viewMode = 'list';
+        // 共通タグプリセット
+        const COMMON_TAGS = ['常連', '紹介', '新規', '足つぼ', 'ヘッド', 'アロマ', '強め希望', '弱め希望', '男性', '女性'];
+        const COMMON_FOCUS = ['首', '肩', '肩甲骨', '背中', '腰', 'お尻', '太もも', 'ふくらはぎ', '足裏', '腕', '頭'];
 
-        // --- DOM要素 ---
-        const els = {
-            formSection: document.getElementById('formSection'),
-            formTitle: document.getElementById('formTitle'),
-            form: document.getElementById('friendForm'),
-            toggleBtn: document.getElementById('toggleFormBtn'),
-            closeBtn: document.getElementById('closeFormBtn'),
-            fabBtn: document.getElementById('fabBtn'),
-            cancelBtn: document.getElementById('cancelBtn'),
-            saveBtn: document.getElementById('saveBtn'),
-            emojiGrid: document.getElementById('emojiGrid'),
-            inputs: {
-                id: document.getElementById('editId'),
-                name: document.getElementById('nameInput'),
-                nickname: document.getElementById('nicknameInput'),
-                feature: document.getElementById('featureInput'),
-                tags: document.getElementById('tagsInput'),
-                memo: document.getElementById('memoInput'),
-                emojiManual: document.getElementById('emojiManualInput'),
+        // ==========================================
+        // DB Service (IndexedDB)
+        // ==========================================
+        const DB_NAME = 'YuruKarteDB';
+        const DB_VERSION = 1;
+
+        const DB = {
+            db: null,
+            init: function() {
+                return new Promise((resolve, reject) => {
+                    const req = indexedDB.open(DB_NAME, DB_VERSION);
+                    req.onupgradeneeded = (e) => {
+                        const db = e.target.result;
+                        if (!db.objectStoreNames.contains('customers')) {
+                            db.createObjectStore('customers', { keyPath: 'id' });
+                        }
+                        if (!db.objectStoreNames.contains('visits')) {
+                            const vs = db.createObjectStore('visits', { keyPath: 'id' });
+                            vs.createIndex('customerId', 'customerId', { unique: false });
+                            vs.createIndex('visitedAt', 'visitedAt', { unique: false });
+                        }
+                        if (!db.objectStoreNames.contains('appointments')) {
+                            const as = db.createObjectStore('appointments', { keyPath: 'id' });
+                            as.createIndex('customerId', 'customerId', { unique: false });
+                            as.createIndex('scheduledAt', 'scheduledAt', { unique: false });
+                        }
+                    };
+                    req.onsuccess = (e) => { this.db = e.target.result; resolve(); };
+                    req.onerror = (e) => { console.error('DB Error', e); reject(e); };
+                });
             },
-            list: document.getElementById('friendList'),
-            emptyState: document.getElementById('emptyState'),
-            countBadge: document.getElementById('countBadge'),
-            searchInput: document.getElementById('searchInput'),
-            tagFilterContainer: document.getElementById('tagFilterContainer'),
-            viewBtns: {
-                list: document.getElementById('viewListBtn'),
-                grid: document.getElementById('viewGridBtn')
+            _store: function(storeName, mode) { return this.db.transaction(storeName, mode).objectStore(storeName); },
+            getAll: function(storeName) {
+                return new Promise((resolve, reject) => {
+                    const req = this._store(storeName, 'readonly').getAll();
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = () => reject(req.error);
+                });
             },
-            deleteBtnArea: document.getElementById('deleteBtnArea'),
-            deleteFromFormBtn: document.getElementById('deleteFromFormBtn'),
-            // データ管理関連
-            dataMenuBtn: document.getElementById('dataMenuBtn'),
-            dataModal: document.getElementById('dataModal'),
-            closeDataModalBtn: document.getElementById('closeDataModalBtn'),
-            dataModalOverlay: document.getElementById('dataModalOverlay'),
-            copyJsonBtn: document.getElementById('copyJsonBtn'),
-            downloadJsonBtn: document.getElementById('downloadJsonBtn'),
-            importInput: document.getElementById('importInput'),
-            importBtn: document.getElementById('importBtn')
+            getByIndex: function(storeName, indexName, value) {
+                return new Promise((resolve, reject) => {
+                    const req = this._store(storeName, 'readonly').index(indexName).getAll(value);
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = () => reject(req.error);
+                });
+            },
+            get: function(storeName, id) {
+                return new Promise((resolve, reject) => {
+                    const req = this._store(storeName, 'readonly').get(id);
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = () => reject(req.error);
+                });
+            },
+            put: function(storeName, item) {
+                return new Promise((resolve, reject) => {
+                    item.updatedAt = new Date().toISOString();
+                    if (!item.createdAt) item.createdAt = item.updatedAt;
+                    const req = this._store(storeName, 'readwrite').put(item);
+                    req.onsuccess = () => resolve(req.result);
+                    req.onerror = () => reject(req.error);
+                });
+            },
+            delete: function(storeName, id) {
+                return new Promise((resolve, reject) => {
+                    const req = this._store(storeName, 'readwrite').delete(id);
+                    req.onsuccess = () => resolve();
+                    req.onerror = () => reject(req.error);
+                });
+            },
+            clear: function(storeName) {
+                return new Promise((resolve, reject) => {
+                    const req = this._store(storeName, 'readwrite').clear();
+                    req.onsuccess = () => resolve();
+                    req.onerror = () => reject(req.error);
+                });
+            }
         };
 
-        // --- 初期化 ---
-        function init() {
-            renderEmojiPicker();
-            loadFriendsFromStorage();
-            renderTagFilters();
-            renderList();
-            setupEventListeners();
-        }
+        // ==========================================
+        // App Logic & State
+        // ==========================================
+        const App = {
+            state: {
+                currentView: 'home',
+                customers: [], // キャッシュ用
+                currentCustomerId: null,
+                searchQuery: '',
+                currentTag: 'ALL'
+            },
 
-        // --- データ操作 (LocalStorage) ---
-        function loadFriendsFromStorage() {
-            const json = localStorage.getItem(STORAGE_KEY);
-            if (json) {
+            async init() {
                 try {
-                    friends = JSON.parse(json);
-                    friends.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-                } catch(e) {
-                    console.error('Data corrupted', e);
-                    friends = [];
-                }
-            } else {
-                friends = [];
-            }
-        }
-
-        function saveToStorage() {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(friends));
-            loadFriendsFromStorage(); // 再ロード（ソート等のため）
-            renderTagFilters();
-            renderList();
-        }
-
-        function saveFriendData(friendData) {
-            const now = new Date().toISOString();
-            if (friendData.id) {
-                const index = friends.findIndex(f => f.id === friendData.id);
-                if (index !== -1) {
-                    friends[index] = { ...friends[index], ...friendData, updatedAt: now };
-                }
-            } else {
-                const newFriend = {
-                    ...friendData,
-                    id: crypto.randomUUID ? crypto.randomUUID() : 'id-' + Date.now() + Math.random(),
-                    createdAt: now,
-                    updatedAt: now
-                };
-                friends.push(newFriend);
-            }
-            saveToStorage();
-            resetForm();
-            toggleForm(false);
-        }
-
-        function deleteFriend(id) {
-            if (!confirm('本当に削除しますか？')) return;
-            friends = friends.filter(f => f.id !== id);
-            saveToStorage();
-            if (!els.formSection.classList.contains('hidden')) toggleForm(false);
-        }
-
-        // --- データ管理機能（JSON） ---
-
-        // エクスポート（コピー）
-        function exportToClipboard() {
-            const dataStr = JSON.stringify(friends, null, 2);
-            navigator.clipboard.writeText(dataStr).then(() => {
-                alert('クリップボードにコピーしました！\nメモアプリなどに貼り付けて保存してください。');
-            }).catch(e => alert('コピーに失敗しました: ' + e));
-        }
-
-        // エクスポート（ファイル保存）
-        function exportToFile() {
-            const dataStr = JSON.stringify(friends, null, 2);
-            const blob = new Blob([dataStr], {type: 'application/json'});
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            const date = new Date().toISOString().slice(0,10).replace(/-/g, '');
-            a.href = url;
-            a.download = `yottomo_backup_${date}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        // インポート処理
-        function handleFileSelect(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                try {
-                    const importedData = JSON.parse(e.target.result);
-                    
-                    // 簡易バリデーション
-                    if (!Array.isArray(importedData)) {
-                        throw new Error('データ形式が不正です（配列ではありません）');
-                    }
-
-                    // モード選択
-                    const mode = confirm(
-                        `読み込みに成功しました（${importedData.length}件）。\n\n` +
-                        `【OK】を押すと、現在のデータを「すべて消去」して置き換えます（復元モード）。\n` +
-                        `【キャンセル】を押すと、現在のデータに「追加」します（マージモード）。`
-                    );
-
-                    if (mode) {
-                        // 上書きモード
-                        friends = importedData;
-                        alert('データを復元（置き換え）しました！');
-                    } else {
-                        // 追加モード (IDが重複するものは上書きしない、あるいは新しいIDにするか...今回は単純に結合)
-                        // ※同じIDのデータがあれば上書き、なければ追加という賢いマージにする
-                        let addedCount = 0;
-                        let updatedCount = 0;
-                        
-                        importedData.forEach(newItem => {
-                            const existingIndex = friends.findIndex(f => f.id === newItem.id);
-                            if (existingIndex !== -1) {
-                                // 既存にある場合は、更新日時が新しい方を採用するか？
-                                // ここではシンプルに「インポートしたデータで上書き」する
-                                friends[existingIndex] = newItem;
-                                updatedCount++;
-                            } else {
-                                friends.push(newItem);
-                                addedCount++;
-                            }
+                    await DB.init();
+                    // 永続化のリクエスト (ブラウザが許可すれば)
+                    if (navigator.storage && navigator.storage.persist) {
+                        navigator.storage.persist().then(granted => {
+                            if(granted) console.log("Storage is persisted");
                         });
-                        alert(`データを追加しました。\n（新規: ${addedCount}件 / 更新: ${updatedCount}件）`);
                     }
-
-                    saveToStorage(); // 保存して再描画
-                    toggleDataModal(false);
-
-                } catch (err) {
-                    alert('ファイルの読み込みに失敗しました。\n正しいJSONファイルか確認してください。\n' + err.message);
+                    this.setupEvents();
+                    this.setupHints();
+                    await this.loadCustomers();
+                    this.navigate('home');
+                } catch (e) {
+                    alert('データベースの初期化に失敗しました。プライベートブラウズ等の設定をご確認ください。');
                 }
-                // inputをリセット（同じファイルを再度選べるように）
-                els.importInput.value = '';
-            };
-            reader.readAsText(file);
-        }
+            },
 
-        // --- レンダリング ---
-        function renderEmojiPicker() {
-            if (!els.inputs.emojiManual.value) els.inputs.emojiManual.value = EMOJI_LIST[0];
-            els.emojiGrid.innerHTML = EMOJI_LIST.map((emoji, index) => `
-                <div class="relative">
-                    <input type="radio" name="emoji" id="emoji-${index}" value="${emoji}" class="emoji-radio sr-only" ${index === 0 ? 'checked' : ''}>
-                    <label for="emoji-${index}" class="block w-full aspect-square flex items-center justify-center text-xl bg-gray-50 border border-gray-200 rounded-lg cursor-pointer hover:bg-indigo-50 transition select-none">
-                        ${emoji}
-                    </label>
-                </div>
-            `).join('');
-        }
+            // --- Navigation ---
+            async navigate(viewId, params = {}) {
+                document.querySelectorAll('.view-section').forEach(el => el.classList.remove('active'));
+                document.getElementById(`view-${viewId}`).classList.add('active');
+                this.state.currentView = viewId;
+                window.scrollTo(0, 0);
 
-        function renderTagFilters() {
-            const allTags = new Set();
-            friends.forEach(f => {
-                if(Array.isArray(f.tags)) f.tags.forEach(t => { if(t.trim()) allTags.add(t.trim()); });
-            });
-            const container = els.tagFilterContainer;
-            while (container.children.length > 1) container.removeChild(container.lastChild);
-            Array.from(allTags).sort().forEach(tag => {
-                const btn = document.createElement('button');
-                btn.className = `px-3 py-1.5 rounded-full text-xs font-bold border whitespace-nowrap transition flex-shrink-0 ${currentFilterTag === tag ? 'bg-indigo-400 text-white border-indigo-400' : 'bg-white text-gray-500 border-gray-200 hover:bg-indigo-50'}`;
-                btn.textContent = `#${tag}`;
-                btn.onclick = () => { currentFilterTag = tag; renderTagFilters(); renderList(); };
-                container.appendChild(btn);
-            });
-            const allBtn = container.children[0];
-            allBtn.className = `px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition flex-shrink-0 ${currentFilterTag === 'ALL' ? 'bg-gray-700 text-white' : 'bg-white text-gray-500 border border-gray-200 hover:bg-gray-100'}`;
-        }
-
-        function renderList() {
-            let filtered = friends.filter(f => {
-                if (currentFilterTag !== 'ALL') {
-                    if (!f.tags || !f.tags.some(t => t.trim() === currentFilterTag)) return false;
+                if (viewId === 'home') {
+                    await this.loadCustomers();
+                    this.renderHome();
+                } else if (viewId === 'customer-detail') {
+                    this.state.currentCustomerId = params.id;
+                    await this.renderCustomerDetail(params.id);
+                } else if (viewId === 'customer-form') {
+                    this.setupCustomerForm(params.id);
+                } else if (viewId === 'visit-form') {
+                    if(!this.state.currentCustomerId) return this.navigate('home');
+                    this.setupVisitForm(params.visitId);
+                } else if (viewId === 'appointment-form') {
+                    if(!this.state.currentCustomerId) return this.navigate('home');
+                    this.setupApptForm(params.apptId);
                 }
-                if (searchQuery) {
-                    const q = searchQuery.toLowerCase();
-                    const tagsStr = Array.isArray(f.tags) ? f.tags.join(' ') : '';
-                    const text = `${f.name} ${f.nickname} ${f.feature} ${f.memo} ${tagsStr}`.toLowerCase();
-                    return text.includes(q);
-                }
-                return true;
-            });
-            
-            els.list.innerHTML = '';
-            els.countBadge.textContent = `${filtered.length}人`;
-            els.list.className = viewMode === 'list' ? 'space-y-3' : 'grid grid-cols-2 gap-3 space-y-0';
+            },
 
-            if (filtered.length === 0) els.emptyState.classList.remove('hidden');
-            else {
-                els.emptyState.classList.add('hidden');
-                filtered.forEach(friend => els.list.appendChild(createCardElement(friend)));
-            }
-        }
+            // --- Data Loaders ---
+            async loadCustomers() {
+                this.state.customers = await DB.getAll('customers');
+                // 並び替え: 更新日時の降順
+                this.state.customers.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+            },
 
-        function createCardElement(friend) {
-            const li = document.createElement('li');
-            const tagsHtml = (friend.tags || []).map(tag => `<span class="inline-block bg-indigo-50 text-indigo-600 text-[10px] px-1.5 py-0.5 rounded mr-1 mb-1">#${tag}</span>`).join('');
-            const memoHtml = (friend.memo || '').replace(/\n/g, '<br>');
+            // --- Rendering: Home ---
+            renderHome() {
+                const listEl = document.getElementById('customerList');
+                const emptyEl = document.getElementById('emptyState');
+                const badge = document.getElementById('customerCountBadge');
+                const tagContainer = document.getElementById('tagFilterContainer');
 
-            if (viewMode === 'list') {
-                li.className = 'bg-white rounded-xl shadow-sm border border-gray-100 p-4 transition active:bg-gray-50';
-                li.innerHTML = `
-                    <div class="flex items-start gap-3" onclick="editFriend('${friend.id}')">
-                        <div class="flex-shrink-0 w-12 h-12 bg-orange-50 rounded-full flex items-center justify-center text-2xl shadow-inner">
-                            ${friend.emoji}
-                        </div>
-                        <div class="flex-grow min-w-0">
-                            <div class="flex justify-between items-start">
+                // タグ一覧の抽出
+                const allTags = new Set();
+                this.state.customers.forEach(c => {
+                    if(c.tags) c.tags.forEach(t => allTags.add(t));
+                });
+
+                // タグフィルタの描画
+                tagContainer.innerHTML = '';
+                const tagsArr = ['ALL', ...Array.from(allTags).sort()];
+                tagsArr.forEach(tag => {
+                    const btn = document.createElement('button');
+                    const isActive = this.state.currentTag === tag;
+                    btn.className = `px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition flex-shrink-0 ${isActive ? 'bg-yuru-main text-white' : 'bg-white text-yuru-sub border border-yuru-border hover:bg-yuru-bg'}`;
+                    btn.textContent = tag === 'ALL' ? 'すべて' : `#${tag}`;
+                    btn.onclick = () => { this.state.currentTag = tag; this.renderHome(); };
+                    tagContainer.appendChild(btn);
+                });
+
+                // フィルタリング
+                let filtered = this.state.customers.filter(c => {
+                    if (this.state.currentTag !== 'ALL') {
+                        if (!c.tags || !c.tags.includes(this.state.currentTag)) return false;
+                    }
+                    if (this.state.searchQuery) {
+                        const q = this.state.searchQuery.toLowerCase();
+                        const searchTarget = `${c.customerCode} ${c.displayName} ${c.kana} ${c.appearanceMemo} ${c.preferenceMemo} ${(c.tags||[]).join(' ')}`.toLowerCase();
+                        if (!searchTarget.includes(q)) return false;
+                    }
+                    return true;
+                });
+
+                badge.textContent = `${filtered.length}名`;
+                listEl.innerHTML = '';
+
+                if (filtered.length === 0) {
+                    emptyEl.classList.remove('hidden');
+                } else {
+                    emptyEl.classList.add('hidden');
+                    filtered.forEach(c => {
+                        const li = document.createElement('li');
+                        li.className = 'bg-white rounded-2xl shadow-sm border border-yuru-border p-4 transition active:bg-yuru-bg cursor-pointer';
+                        li.onclick = () => this.navigate('customer-detail', { id: c.id });
+                        
+                        const tagsHtml = (c.tags || []).map(t => `<span class="inline-block bg-yuru-bg text-yuru-sub border border-yuru-sub/20 text-[10px] px-2 py-0.5 rounded-full mr-1 mb-1">#${t}</span>`).join('');
+                        
+                        // 最終来店日と次回予約の簡易表示 (TODO: 別テーブルからのJOINが必要だが、パフォーマンスのためCustomerテーブルにサマリーを持たせている想定で表示。今回は都度計算は重いので、Customer保存時に更新する設計とする)
+                        const lastVisitText = c.lastVisitAt ? new Date(c.lastVisitAt).toLocaleDateString('ja-JP', {month:'numeric', day:'numeric'}) : 'なし';
+                        
+                        li.innerHTML = `
+                            <div class="flex justify-between items-start mb-2">
                                 <div>
-                                    <h3 class="font-bold text-gray-800 text-base leading-tight">${friend.name}</h3>
-                                    ${friend.nickname ? `<p class="text-xs text-indigo-500 font-medium">@${friend.nickname}</p>` : ''}
+                                    <span class="text-xs font-bold text-yuru-main bg-yuru-main/10 px-2 py-0.5 rounded mr-2">${c.customerCode}</span>
+                                    <span class="font-bold text-yuru-text text-base">${c.displayName || '名前未設定'} 様</span>
                                 </div>
                             </div>
-                            ${friend.feature ? `<div class="mt-1.5 text-xs text-gray-600 bg-gray-50 px-2 py-0.5 rounded border border-gray-100 inline-block truncate max-w-full">💡 ${friend.feature}</div>` : ''}
-                            ${memoHtml ? `<div class="mt-2 text-xs text-gray-500 leading-relaxed border-t border-gray-100 pt-1 line-clamp-2">${memoHtml}</div>` : ''}
-                            ${tagsHtml ? `<div class="mt-2 flex flex-wrap">${tagsHtml}</div>` : ''}
+                            ${c.preferenceMemo ? `<div class="text-xs text-yuru-text mb-2 line-clamp-1"><span class="text-yuru-main font-bold">好み:</span> ${c.preferenceMemo}</div>` : ''}
+                            ${c.cautionMemo ? `<div class="text-[10px] text-yuru-alert font-bold bg-yuru-alert/10 px-2 py-1 rounded mb-2 line-clamp-1 inline-block">⚠ ${c.cautionMemo}</div>` : ''}
+                            <div class="flex flex-wrap mb-2">${tagsHtml}</div>
+                            <div class="flex justify-between text-[10px] text-yuru-sub border-t border-yuru-border pt-2">
+                                <span>前回: ${lastVisitText}</span>
+                            </div>
+                        `;
+                        listEl.appendChild(li);
+                    });
+                }
+            },
+
+            // --- Rendering: Detail ---
+            async renderCustomerDetail(id) {
+                const c = await DB.get('customers', id);
+                if(!c) return this.navigate('home');
+
+                document.getElementById('btnEditCustomer').onclick = () => this.navigate('customer-form', {id: id});
+                document.getElementById('btnAddVisit').onclick = () => this.navigate('visit-form');
+                document.getElementById('btnAddAppt').onclick = () => this.navigate('appointment-form');
+
+                // Basic Info
+                const tagsHtml = (c.tags || []).map(t => `<span class="inline-block bg-yuru-bg text-yuru-sub border border-yuru-sub/20 text-[10px] px-2 py-0.5 rounded-full mr-1 mb-1">#${t}</span>`).join('');
+                document.getElementById('detailBasicCard').innerHTML = `
+                    <div class="mb-3">
+                        <span class="text-xs font-bold text-yuru-main bg-yuru-main/10 px-2 py-0.5 rounded mr-2">${c.customerCode}</span>
+                        <span class="text-xs text-yuru-sub">${c.kana || ''}</span>
+                        <h3 class="font-bold text-yuru-text text-xl mt-1">${c.displayName || '名前未設定'} 様</h3>
+                        ${c.ageMemo || c.gender !== 'unknown' ? `<p class="text-xs text-yuru-sub mt-1">${c.gender === 'female'?'女性':c.gender==='male'?'男性':''} ${c.ageMemo||''}</p>` : ''}
+                    </div>
+                    <div class="flex flex-wrap mb-4">${tagsHtml}</div>
+                    
+                    <div class="space-y-3 text-sm">
+                        ${c.preferenceMemo ? `
+                            <div class="bg-yuru-bg p-3 rounded-xl">
+                                <span class="block text-[10px] font-bold text-yuru-main mb-1">施術の好み</span>
+                                <span class="text-yuru-text font-medium">${c.preferenceMemo.replace(/\n/g, '<br>')}</span>
+                            </div>` : ''}
+                        ${c.cautionMemo ? `
+                            <div class="bg-red-50 p-3 rounded-xl border border-red-100">
+                                <span class="block text-[10px] font-bold text-yuru-alert mb-1">注意点・NG</span>
+                                <span class="text-yuru-alert font-bold">${c.cautionMemo.replace(/\n/g, '<br>')}</span>
+                            </div>` : ''}
+                        ${c.appearanceMemo || c.personalityMemo ? `
+                            <div class="border-t border-yuru-border pt-3">
+                                <span class="block text-[10px] font-bold text-yuru-sub mb-1">特徴・メモ</span>
+                                <span class="text-yuru-text text-xs">${[c.appearanceMemo, c.personalityMemo].filter(Boolean).join(' / ')}</span>
+                            </div>` : ''}
+                    </div>
+                `;
+
+                // Appointments
+                const appts = await DB.getByIndex('appointments', 'customerId', id);
+                const upcoming = appts.filter(a => a.status === 'scheduled').sort((a, b) => new Date(a.scheduledAt) - new Date(b.scheduledAt))[0];
+                const apptContainer = document.getElementById('detailApptContainer');
+                
+                if (upcoming) {
+                    apptContainer.classList.remove('hidden');
+                    const d = new Date(upcoming.scheduledAt);
+                    const formatted = `${d.getMonth()+1}/${d.getDate()} (${['日','月','火','水','木','金','土'][d.getDay()]}) ${d.getHours().toString().padStart(2,'0')}:${d.getMinutes().toString().padStart(2,'0')}`;
+                    document.getElementById('detailApptCard').innerHTML = `
+                        <div class="flex justify-between items-start cursor-pointer" onclick="App.navigate('appointment-form', {apptId: '${upcoming.id}'})">
+                            <div>
+                                <div class="font-bold text-yuru-text text-lg">${formatted}</div>
+                                <div class="text-sm font-bold text-yuru-main mt-1">
+                                    ${upcoming.courseCode ? upcoming.courseCode : ''}
+                                    ${upcoming.durationMinutes ? ` <span class="text-xs text-yuru-sub bg-yuru-bg px-1 rounded">${upcoming.durationMinutes}分</span>` : ''}
+                                </div>
+                                ${upcoming.memo ? `<div class="text-xs text-yuru-text mt-1 opacity-80">${upcoming.memo}</div>` : ''}
+                            </div>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-yuru-main mt-1"><path d="M9 18l6-6-6-6"/></svg>
                         </div>
-                    </div>
-                `;
-            } else {
-                li.className = 'bg-white rounded-xl shadow-sm border border-gray-100 p-3 transition active:bg-gray-50 h-full flex flex-col items-center text-center';
-                li.onclick = () => editFriend(friend.id);
-                li.innerHTML = `
-                    <div class="flex-shrink-0 w-12 h-12 bg-orange-50 rounded-full flex items-center justify-center text-2xl shadow-inner mb-2">
-                        ${friend.emoji}
-                    </div>
-                    <h3 class="font-bold text-gray-800 text-sm leading-tight w-full truncate px-1">${friend.name}</h3>
-                    ${friend.nickname ? `<p class="text-[10px] text-indigo-500 font-medium mb-1 truncate max-w-full">@${friend.nickname}</p>` : '<div class="mb-1 h-3"></div>'}
-                    ${tagsHtml ? `<div class="mt-auto flex flex-wrap justify-center gap-0.5 w-full overflow-hidden h-5 opacity-80">${tagsHtml}</div>` : ''}
-                `;
-            }
-            return li;
-        }
+                    `;
+                } else {
+                    apptContainer.classList.add('hidden');
+                }
 
-        // --- イベントハンドラ ---
-        function toggleForm(show) {
-            if (show) {
-                els.formSection.classList.remove('hidden');
-                els.fabBtn.classList.add('hidden');
-                els.formSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            } else {
-                els.formSection.classList.add('hidden');
-                els.fabBtn.classList.remove('hidden');
-                resetForm();
-            }
-        }
-        
-        function toggleDataModal(show) {
-            if (show) {
-                els.dataModal.classList.remove('hidden');
+                // Visits
+                let visits = await DB.getByIndex('visits', 'customerId', id);
+                visits.sort((a, b) => new Date(b.visitedAt) - new Date(a.visitedAt));
+                const visitList = document.getElementById('detailVisitList');
+                visitList.innerHTML = '';
+                
+                if (visits.length === 0) {
+                    visitList.innerHTML = `<div class="text-center py-4 text-xs text-yuru-sub bg-white rounded-xl border border-yuru-border">施術履歴はありません</div>`;
+                } else {
+                    visits.forEach((v, idx) => {
+                        const isLatest = idx === 0;
+                        const d = new Date(v.visitedAt);
+                        const pMap = { soft: '弱め', normal: '普通', strong: '強め', veryStrong: 'ゴリゴリ' };
+                        const focusHtml = (v.focusAreas||[]).map(f => `<span class="text-[10px] bg-yuru-bg px-1.5 py-0.5 rounded text-yuru-sub mr-1">重点: ${f}</span>`).join('');
+                        
+                        let courseDisplay = '';
+                        if(v.courseCode) courseDisplay += v.courseCode;
+                        if(v.durationMinutes) courseDisplay += ` <span class="opacity-80">(${v.durationMinutes}分)</span>`;
+
+                        visitList.innerHTML += `
+                            <div class="bg-white rounded-xl p-4 shadow-sm border border-yuru-border relative cursor-pointer active:bg-yuru-bg transition" onclick="App.navigate('visit-form', {visitId: '${v.id}'})">
+                                ${isLatest && v.nextHint ? `
+                                    <div class="absolute -top-3 left-4 bg-yuru-main text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-sm">
+                                        💡 次回へ: ${v.nextHint}
+                                    </div>
+                                ` : ''}
+                                <div class="flex justify-between items-center mb-2 ${isLatest && v.nextHint ? 'mt-2' : ''}">
+                                    <span class="font-bold text-sm text-yuru-text">${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}</span>
+                                    ${courseDisplay ? `<span class="text-xs font-bold text-yuru-main bg-yuru-main/10 px-2 py-0.5 rounded">${courseDisplay}</span>` : ''}
+                                </div>
+                                <div class="mb-2 flex flex-wrap gap-1">${focusHtml} <span class="text-[10px] bg-yuru-bg px-1.5 py-0.5 rounded text-yuru-sub">強さ: ${pMap[v.pressurePreference]||'-'}</span></div>
+                                ${v.treatmentMemo ? `<p class="text-xs text-yuru-text line-clamp-3 mb-2">${v.treatmentMemo.replace(/\n/g, '<br>')}</p>` : ''}
+                                ${v.conversationMemo ? `<p class="text-[10px] text-yuru-sub border-t border-yuru-border pt-1 mt-1 line-clamp-1">💬 ${v.conversationMemo}</p>` : ''}
+                            </div>
+                        `;
+                    });
+                }
+            },
+
+            // --- Forms Setup ---
+            async setupCustomerForm(id) {
+                const f = document.getElementById('customerForm');
+                f.reset();
+                const delArea = document.getElementById('customerDeleteArea');
+                if (id) {
+                    const c = await DB.get('customers', id);
+                    if (c) {
+                        document.getElementById('customerFormTitle').textContent = '顧客情報の編集';
+                        document.getElementById('c_id').value = c.id;
+                        document.getElementById('c_code').value = c.customerCode || '';
+                        document.getElementById('c_name').value = c.displayName || '';
+                        document.getElementById('c_kana').value = c.kana || '';
+                        document.getElementById('c_gender').value = c.gender || 'unknown';
+                        document.getElementById('c_age').value = c.ageMemo || '';
+                        document.getElementById('c_appearance').value = c.appearanceMemo || '';
+                        document.getElementById('c_personality').value = c.personalityMemo || '';
+                        document.getElementById('c_preference').value = c.preferenceMemo || '';
+                        document.getElementById('c_caution').value = c.cautionMemo || '';
+                        document.getElementById('c_tags').value = (c.tags || []).join(', ');
+                        delArea.classList.remove('hidden');
+                        document.getElementById('btnDeleteCustomer').onclick = () => this.deleteCustomer(c.id);
+                    }
+                } else {
+                    document.getElementById('customerFormTitle').textContent = '顧客を登録';
+                    document.getElementById('c_id').value = '';
+                    delArea.classList.add('hidden');
+                }
+            },
+
+            async setupVisitForm(visitId) {
+                const f = document.getElementById('visitForm');
+                f.reset();
+                const delArea = document.getElementById('visitDeleteArea');
+                
+                // ターゲット名表示
+                const c = await DB.get('customers', this.state.currentCustomerId);
+                document.getElementById('v_target_name').textContent = `対象: ${c ? c.displayName || c.customerCode : ''} 様`;
+
+                if (visitId) {
+                    const v = await DB.get('visits', visitId);
+                    if (v) {
+                        document.getElementById('v_id').value = v.id;
+                        document.getElementById('v_date').value = v.visitedAt.substring(0, 10);
+                        document.getElementById('v_course').value = v.courseCode || '';
+                        document.getElementById('v_duration').value = v.durationMinutes || '';
+                        if(v.pressurePreference) {
+                            const radio = document.querySelector(`input[name="v_pressure"][value="${v.pressurePreference}"]`);
+                            if(radio) radio.checked = true;
+                        }
+                        document.getElementById('v_focus').value = (v.focusAreas || []).join(', ');
+                        document.getElementById('v_treatment').value = v.treatmentMemo || '';
+                        document.getElementById('v_conversation').value = v.conversationMemo || '';
+                        document.getElementById('v_next_hint').value = v.nextHint || '';
+                        delArea.classList.remove('hidden');
+                        document.getElementById('btnDeleteVisit').onclick = () => this.deleteVisit(v.id);
+                    }
+                } else {
+                    document.getElementById('v_id').value = '';
+                    // 今日の日付をセット
+                    const today = new Date();
+                    const yyyy = today.getFullYear();
+                    const mm = String(today.getMonth() + 1).padStart(2, '0');
+                    const dd = String(today.getDate()).padStart(2, '0');
+                    document.getElementById('v_date').value = `${yyyy}-${mm}-${dd}`;
+                    delArea.classList.add('hidden');
+                }
+            },
+
+            async setupApptForm(apptId) {
+                const f = document.getElementById('apptForm');
+                f.reset();
+                const delArea = document.getElementById('apptDeleteArea');
+                
+                const c = await DB.get('customers', this.state.currentCustomerId);
+                document.getElementById('a_target_name').textContent = `対象: ${c ? c.displayName || c.customerCode : ''} 様`;
+
+                if (apptId) {
+                    const a = await DB.get('appointments', apptId);
+                    if (a) {
+                        document.getElementById('a_id').value = a.id;
+                        // datetime-local フォーマット変換 (YYYY-MM-DDThh:mm)
+                        const d = new Date(a.scheduledAt);
+                        const localDt = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
+                        document.getElementById('a_date').value = localDt;
+                        document.getElementById('a_course').value = a.courseCode || '';
+                        document.getElementById('a_duration').value = a.durationMinutes || '';
+                        document.getElementById('a_memo').value = a.memo || '';
+                        document.getElementById('a_status').value = a.status || 'scheduled';
+                        delArea.classList.remove('hidden');
+                        document.getElementById('btnDeleteAppt').onclick = () => this.deleteAppt(a.id);
+                    }
+                } else {
+                    document.getElementById('a_id').value = '';
+                    delArea.classList.add('hidden');
+                }
+            },
+
+            // --- Form Submit Handlers ---
+            async saveCustomer(e) {
+                e.preventDefault();
+                const id = document.getElementById('c_id').value || uuidv4();
+                const tagsStr = document.getElementById('c_tags').value;
+                const tags = tagsStr.split(',').map(t => t.trim()).filter(t => t);
+
+                const cData = {
+                    id: id,
+                    customerCode: document.getElementById('c_code').value,
+                    displayName: document.getElementById('c_name').value,
+                    kana: document.getElementById('c_kana').value,
+                    gender: document.getElementById('c_gender').value,
+                    ageMemo: document.getElementById('c_age').value,
+                    appearanceMemo: document.getElementById('c_appearance').value,
+                    personalityMemo: document.getElementById('c_personality').value,
+                    preferenceMemo: document.getElementById('c_preference').value,
+                    cautionMemo: document.getElementById('c_caution').value,
+                    tags: tags
+                };
+
+                // 既存データを取得してマージ（lastVisitAtなどを消さないため）
+                const existing = await DB.get('customers', id);
+                await DB.put('customers', { ...existing, ...cData });
+                this.navigate(existing ? 'customer-detail' : 'home', { id: id });
+            },
+
+            async saveVisit(e) {
+                e.preventDefault();
+                
+                // バリデーションチェック (時間)
+                const durationInput = document.getElementById('v_duration').value;
+                let durationMinutes = null;
+                if (durationInput) {
+                    durationMinutes = Number(durationInput);
+                    if (isNaN(durationMinutes) || durationMinutes <= 0 || !Number.isInteger(durationMinutes)) {
+                        alert("時間は1以上の整数（分）で入力してください。");
+                        return;
+                    }
+                }
+
+                const id = document.getElementById('v_id').value || uuidv4();
+                const cid = this.state.currentCustomerId;
+                
+                const focusStr = document.getElementById('v_focus').value;
+                const focusAreas = focusStr.split(',').map(t => t.trim()).filter(t => t);
+                const pressure = document.querySelector('input[name="v_pressure"]:checked')?.value || 'normal';
+
+                const vData = {
+                    id: id,
+                    customerId: cid,
+                    visitedAt: document.getElementById('v_date').value + 'T00:00:00Z', // 簡易的にUTCの0時とする
+                    courseCode: document.getElementById('v_course').value,
+                    durationMinutes: durationMinutes,
+                    pressurePreference: pressure,
+                    focusAreas: focusAreas,
+                    treatmentMemo: document.getElementById('v_treatment').value,
+                    conversationMemo: document.getElementById('v_conversation').value,
+                    nextHint: document.getElementById('v_next_hint').value
+                };
+
+                await DB.put('visits', vData);
+                await this.updateCustomerLastVisit(cid);
+                this.navigate('customer-detail', { id: cid });
+            },
+
+            async saveAppt(e) {
+                e.preventDefault();
+
+                // バリデーションチェック (時間)
+                const durationInput = document.getElementById('a_duration').value;
+                let durationMinutes = null;
+                if (durationInput) {
+                    durationMinutes = Number(durationInput);
+                    if (isNaN(durationMinutes) || durationMinutes <= 0 || !Number.isInteger(durationMinutes)) {
+                        alert("時間は1以上の整数（分）で入力してください。");
+                        return;
+                    }
+                }
+
+                const id = document.getElementById('a_id').value || uuidv4();
+                const cid = this.state.currentCustomerId;
+                
+                const dateVal = document.getElementById('a_date').value;
+                const isoDate = new Date(dateVal).toISOString();
+
+                const aData = {
+                    id: id,
+                    customerId: cid,
+                    scheduledAt: isoDate,
+                    courseCode: document.getElementById('a_course').value,
+                    durationMinutes: durationMinutes,
+                    memo: document.getElementById('a_memo').value,
+                    status: document.getElementById('a_status').value
+                };
+
+                await DB.put('appointments', aData);
+                this.navigate('customer-detail', { id: cid });
+            },
+
+            // --- Delete Handlers ---
+            async deleteCustomer(id) {
+                if(!confirm('本当に削除しますか？\n（関連する履歴や予約も論理的には残り見えなくなります）')) return;
+                await DB.delete('customers', id);
+                // 関連データも消すのが丁寧だが今回はシンプルに本体のみ削除
+                this.navigate('home');
+            },
+            async deleteVisit(id) {
+                if(!confirm('履歴を削除しますか？')) return;
+                await DB.delete('visits', id);
+                await this.updateCustomerLastVisit(this.state.currentCustomerId);
+                this.navigate('customer-detail', { id: this.state.currentCustomerId });
+            },
+            async deleteAppt(id) {
+                if(!confirm('予約を削除しますか？')) return;
+                await DB.delete('appointments', id);
+                this.navigate('customer-detail', { id: this.state.currentCustomerId });
+            },
+
+            // --- Helpers ---
+            async updateCustomerLastVisit(customerId) {
+                const visits = await DB.getByIndex('visits', 'customerId', customerId);
+                let lastDate = null;
+                if (visits.length > 0) {
+                    visits.sort((a, b) => new Date(b.visitedAt) - new Date(a.visitedAt));
+                    lastDate = visits[0].visitedAt;
+                }
+                const c = await DB.get('customers', customerId);
+                if (c) {
+                    c.lastVisitAt = lastDate;
+                    await DB.put('customers', c);
+                }
+            },
+
+            appendInputCommaStr(inputId, val) {
+                const el = document.getElementById(inputId);
+                let current = el.value.trim();
+                if (current.length > 0 && !current.endsWith(',')) current += ', ';
+                el.value = current + val;
+            },
+
+            setupHints() {
+                const cHints = document.getElementById('c_tag_hints');
+                COMMON_TAGS.forEach(t => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'text-[10px] bg-yuru-bg border border-yuru-border text-yuru-sub px-2 py-1 rounded-full hover:bg-yuru-sub hover:text-white transition';
+                    btn.textContent = '+' + t;
+                    btn.onclick = () => this.appendInputCommaStr('c_tags', t);
+                    cHints.appendChild(btn);
+                });
+
+                const vHints = document.getElementById('v_focus_hints');
+                COMMON_FOCUS.forEach(t => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'text-[10px] bg-yuru-bg border border-yuru-border text-yuru-sub px-2 py-1 rounded-full hover:bg-yuru-main hover:text-white transition';
+                    btn.textContent = '+' + t;
+                    btn.onclick = () => this.appendInputCommaStr('v_focus', t);
+                    vHints.appendChild(btn);
+                });
+            },
+
+            setupEvents() {
+                // Search
+                document.getElementById('searchInput').addEventListener('input', (e) => {
+                    this.state.searchQuery = e.target.value;
+                    this.renderHome();
+                });
+
+                // Forms
+                document.getElementById('customerForm').addEventListener('submit', (e) => this.saveCustomer(e));
+                document.getElementById('visitForm').addEventListener('submit', (e) => this.saveVisit(e));
+                document.getElementById('apptForm').addEventListener('submit', (e) => this.saveAppt(e));
+            },
+
+            // --- Data Management (Export/Import) ---
+            async openDataModal() {
+                const cCount = (await DB.getAll('customers')).length;
+                const vCount = (await DB.getAll('visits')).length;
+                const aCount = (await DB.getAll('appointments')).length;
+                document.getElementById('dataCountText').textContent = `顧客 ${cCount}名 / 履歴 ${vCount}件 / 予約 ${aCount}件`;
+                
+                document.getElementById('modal-data').classList.remove('hidden');
                 document.body.classList.add('modal-open');
-            } else {
-                els.dataModal.classList.add('hidden');
+            },
+
+            closeDataModal() {
+                document.getElementById('modal-data').classList.add('hidden');
                 document.body.classList.remove('modal-open');
+            },
+
+            async exportData() {
+                try {
+                    const data = {
+                        schemaVersion: 1,
+                        appName: "yuru-karte",
+                        exportedAt: new Date().toISOString(),
+                        customers: await DB.getAll('customers'),
+                        visits: await DB.getAll('visits'),
+                        appointments: await DB.getAll('appointments')
+                    };
+                    const json = JSON.stringify(data, null, 2);
+                    const blob = new Blob([json], {type: 'application/json'});
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    const dateStr = new Date().toISOString().slice(0,10).replace(/-/g, '');
+                    a.href = url;
+                    a.download = `yurukarte_backup_${dateStr}.json`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                } catch(e) {
+                    alert('バックアップの作成に失敗しました。');
+                    console.error(e);
+                }
+            },
+
+            importData(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        if(data.appName !== 'yuru-karte' || !data.schemaVersion) {
+                            throw new Error('ゆるカルテのバックアップデータではありません。');
+                        }
+
+                        if(confirm(`バックアップデータ（顧客${data.customers.length}件）を読み込みます。\n※現在のデータに追加・上書きされます。よろしいですか？`)) {
+                            // 簡易マージ処理 (put)
+                            for(const c of data.customers || []) await DB.put('customers', c);
+                            for(const v of data.visits || []) await DB.put('visits', v);
+                            for(const a of data.appointments || []) await DB.put('appointments', a);
+                            
+                            alert('データの復元が完了しました。');
+                            this.closeDataModal();
+                            this.navigate('home');
+                        }
+                    } catch (err) {
+                        alert('読み込みエラー:\n' + err.message);
+                    }
+                    event.target.value = ''; // リセット
+                };
+                reader.readAsText(file);
             }
-        }
-
-        function resetForm() {
-            els.form.reset();
-            els.inputs.id.value = '';
-            els.formTitle.textContent = '友達を登録';
-            els.saveBtn.textContent = '保存する';
-            els.deleteBtnArea.classList.add('hidden');
-            els.inputs.emojiManual.value = EMOJI_LIST[0];
-            const firstEmoji = document.getElementById('emoji-0');
-            if(firstEmoji) firstEmoji.checked = true;
-        }
-
-        window.editFriend = function(id) {
-            const friend = friends.find(f => f.id === id);
-            if (!friend) return;
-            els.inputs.id.value = friend.id;
-            els.inputs.name.value = friend.name;
-            els.inputs.nickname.value = friend.nickname;
-            els.inputs.feature.value = friend.feature;
-            els.inputs.tags.value = (friend.tags || []).join(', ');
-            els.inputs.memo.value = friend.memo;
-            els.inputs.emojiManual.value = friend.emoji || EMOJI_LIST[0];
-            const radio = Array.from(document.querySelectorAll('.emoji-radio')).find(r => r.value === friend.emoji);
-            if (radio) radio.checked = true;
-            else document.querySelectorAll('.emoji-radio').forEach(r => r.checked = false);
-            els.deleteBtnArea.classList.remove('hidden');
-            els.formTitle.textContent = '友達情報を編集';
-            els.saveBtn.textContent = '更新する';
-            toggleForm(true);
         };
 
-        function setupEventListeners() {
-            els.form.addEventListener('submit', (e) => {
-                e.preventDefault();
-                const name = els.inputs.name.value.trim();
-                if (!name) return;
-                const friendData = {
-                    id: els.inputs.id.value || null,
-                    name: name,
-                    nickname: els.inputs.nickname.value.trim(),
-                    feature: els.inputs.feature.value.trim(),
-                    memo: els.inputs.memo.value.trim(),
-                    emoji: els.inputs.emojiManual.value.trim() || EMOJI_LIST[0],
-                    tags: els.inputs.tags.value.split(/[,、\s]+/).filter(t => t.length > 0)
-                };
-                saveFriendData(friendData);
-            });
+        // Bootstrap
+        document.addEventListener('DOMContentLoaded', () => App.init());
 
-            els.cancelBtn.addEventListener('click', () => resetForm());
-            els.toggleBtn.addEventListener('click', () => toggleForm(true));
-            els.fabBtn.addEventListener('click', () => toggleForm(true));
-            els.closeBtn.addEventListener('click', () => toggleForm(false));
-            
-            // データ管理メニュー
-            els.dataMenuBtn.addEventListener('click', () => toggleDataModal(true));
-            els.closeDataModalBtn.addEventListener('click', () => toggleDataModal(false));
-            els.dataModalOverlay.addEventListener('click', () => toggleDataModal(false));
-
-            // インポート/エクスポート
-            els.copyJsonBtn.addEventListener('click', exportToClipboard);
-            els.downloadJsonBtn.addEventListener('click', exportToFile);
-            els.importBtn.addEventListener('click', () => els.importInput.click());
-            els.importInput.addEventListener('change', handleFileSelect);
-
-            els.deleteFromFormBtn.addEventListener('click', () => {
-                const id = els.inputs.id.value;
-                if(id) deleteFriend(id);
-            });
-
-            els.searchInput.addEventListener('input', (e) => { searchQuery = e.target.value.trim(); renderList(); });
-            els.tagFilterContainer.children[0].addEventListener('click', () => { currentFilterTag = 'ALL'; renderTagFilters(); renderList(); });
-
-            els.emojiGrid.addEventListener('change', (e) => { if (e.target.name === 'emoji') els.inputs.emojiManual.value = e.target.value; });
-            els.inputs.emojiManual.addEventListener('input', (e) => {
-                const val = e.target.value;
-                const radio = Array.from(document.querySelectorAll('.emoji-radio')).find(r => r.value === val);
-                if (radio) radio.checked = true;
-            });
-
-            els.viewBtns.list.addEventListener('click', () => { viewMode = 'list'; els.viewBtns.list.classList.add('active'); els.viewBtns.grid.classList.remove('active'); renderList(); });
-            els.viewBtns.grid.addEventListener('click', () => { viewMode = 'grid'; els.viewBtns.grid.classList.add('active'); els.viewBtns.list.classList.remove('active'); renderList(); });
-        }
-
-        document.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
-
