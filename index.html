@@ -4,10 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>ゆるカルテ - サロン向け顧客メモ</title>
-
-    <link rel="icon" href="./icon.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="./icon.png">
-
+    
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="ゆるカルテ">
@@ -61,6 +58,9 @@
         }
         .yuru-input:focus { outline: none; border-color: #C88691; box-shadow: 0 0 0 3px rgba(200, 134, 145, 0.1); }
         .yuru-label { display: block; font-size: 0.75rem; font-weight: 700; color: #9C8A8E; margin-bottom: 0.25rem; }
+
+        /* リスト・グリッド切り替えボタン用 */
+        .view-btn.active { background-color: #FFFFFF; color: #C88691; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
     </style>
 </head>
 <body class="font-sans antialiased min-h-screen pb-24 safe-area-inset-bottom">
@@ -111,6 +111,15 @@
                     <h2 class="font-bold text-yuru-text text-sm flex items-center gap-2">
                         顧客リスト <span id="customerCountBadge" class="bg-yuru-accent/20 text-yuru-alert px-2 py-0.5 rounded-full text-[10px]">0名</span>
                     </h2>
+                    
+                    <div class="flex bg-[#FFF0F3] p-0.5 rounded-lg border border-[#F2D5D9]">
+                        <button id="viewListBtn" class="view-btn active px-2 py-1 rounded-md text-yuru-sub hover:text-yuru-text transition" onclick="App.setViewMode('list')">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                        </button>
+                        <button id="viewGridBtn" class="view-btn px-2 py-1 rounded-md text-yuru-sub hover:text-yuru-text transition" onclick="App.setViewMode('grid')">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+                        </button>
+                    </div>
                 </div>
                 <ul id="customerList" class="space-y-3 pb-10">
                     <!-- JSで描画 -->
@@ -563,7 +572,8 @@
                 customers: [], // キャッシュ用
                 currentCustomerId: null,
                 searchQuery: '',
-                currentTag: 'ALL'
+                currentTag: 'ALL',
+                viewMode: 'list'
             },
 
             async init() {
@@ -615,6 +625,18 @@
                 this.state.customers.sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
             },
 
+            setViewMode(mode) {
+                this.state.viewMode = mode;
+                if (mode === 'list') {
+                    document.getElementById('viewListBtn').classList.add('active');
+                    document.getElementById('viewGridBtn').classList.remove('active');
+                } else {
+                    document.getElementById('viewGridBtn').classList.add('active');
+                    document.getElementById('viewListBtn').classList.remove('active');
+                }
+                this.renderHome();
+            },
+
             // --- Rendering: Home ---
             renderHome() {
                 const listEl = document.getElementById('customerList');
@@ -655,6 +677,12 @@
 
                 badge.textContent = `${filtered.length}名`;
                 listEl.innerHTML = '';
+                
+                if (this.state.viewMode === 'list') {
+                    listEl.className = 'space-y-3 pb-10';
+                } else {
+                    listEl.className = 'grid grid-cols-2 gap-3 space-y-0 pb-10';
+                }
 
                 if (filtered.length === 0) {
                     emptyEl.classList.remove('hidden');
@@ -662,28 +690,46 @@
                     emptyEl.classList.add('hidden');
                     filtered.forEach(c => {
                         const li = document.createElement('li');
-                        li.className = 'bg-white rounded-2xl shadow-sm border border-yuru-border p-4 transition active:bg-yuru-bg cursor-pointer';
-                        li.onclick = () => this.navigate('customer-detail', { id: c.id });
                         
-                        const tagsHtml = (c.tags || []).map(t => `<span class="inline-block bg-yuru-bg text-yuru-sub border border-yuru-sub/20 text-[10px] px-2 py-0.5 rounded-full mr-1 mb-1">#${t}</span>`).join('');
-                        
-                        // 最終来店日と次回予約の簡易表示 (TODO: 別テーブルからのJOINが必要だが、パフォーマンスのためCustomerテーブルにサマリーを持たせている想定で表示。今回は都度計算は重いので、Customer保存時に更新する設計とする)
+                        const tagsHtml = (c.tags || []).map(t => `<span class="inline-block bg-[#FFF0F3] text-yuru-sub border border-[#F2D5D9] text-[10px] px-2 py-0.5 rounded-full mr-1 mb-1">#${t}</span>`).join('');
                         const lastVisitText = c.lastVisitAt ? new Date(c.lastVisitAt).toLocaleDateString('ja-JP', {month:'numeric', day:'numeric'}) : 'なし';
                         
-                        li.innerHTML = `
-                            <div class="flex justify-between items-start mb-2">
-                                <div>
-                                    <span class="text-xs font-bold text-yuru-main bg-yuru-main/10 px-2 py-0.5 rounded mr-2">${c.customerCode}</span>
-                                    <span class="font-bold text-yuru-text text-base">${c.displayName || '名前未設定'} 様</span>
+                        if (this.state.viewMode === 'list') {
+                            li.className = 'bg-white rounded-2xl shadow-sm border border-yuru-border p-4 transition active:bg-[#FFF0F3] cursor-pointer';
+                            li.onclick = () => this.navigate('customer-detail', { id: c.id });
+                            
+                            li.innerHTML = `
+                                <div class="flex justify-between items-start mb-2">
+                                    <div>
+                                        <span class="text-xs font-bold text-yuru-main bg-yuru-main/10 px-2 py-0.5 rounded mr-2">${c.customerCode}</span>
+                                        <span class="font-bold text-yuru-text text-base">${c.displayName || '名前未設定'} 様</span>
+                                    </div>
                                 </div>
-                            </div>
-                            ${c.preferenceMemo ? `<div class="text-xs text-yuru-text mb-2 line-clamp-1"><span class="text-yuru-main font-bold">好み:</span> ${c.preferenceMemo}</div>` : ''}
-                            ${c.cautionMemo ? `<div class="text-[10px] text-yuru-alert font-bold bg-yuru-alert/10 px-2 py-1 rounded mb-2 line-clamp-1 inline-block">⚠ ${c.cautionMemo}</div>` : ''}
-                            <div class="flex flex-wrap mb-2">${tagsHtml}</div>
-                            <div class="flex justify-between text-[10px] text-yuru-sub border-t border-yuru-border pt-2">
-                                <span>前回: ${lastVisitText}</span>
-                            </div>
-                        `;
+                                ${c.preferenceMemo ? `<div class="text-xs text-yuru-text mb-2 line-clamp-1"><span class="text-yuru-main font-bold">好み:</span> ${c.preferenceMemo}</div>` : ''}
+                                ${c.cautionMemo ? `<div class="text-[10px] text-yuru-alert font-bold bg-yuru-alert/10 px-2 py-1 rounded mb-2 line-clamp-1 inline-block">⚠ ${c.cautionMemo}</div>` : ''}
+                                <div class="flex flex-wrap mb-2">${tagsHtml}</div>
+                                <div class="flex justify-between text-[10px] text-yuru-sub border-t border-yuru-border pt-2">
+                                    <span>前回: ${lastVisitText}</span>
+                                </div>
+                            `;
+                        } else {
+                            li.className = 'bg-white rounded-2xl shadow-sm border border-yuru-border p-3 transition active:bg-[#FFF0F3] cursor-pointer flex flex-col h-full';
+                            li.onclick = () => this.navigate('customer-detail', { id: c.id });
+                            
+                            const tagsHtmlGrid = (c.tags || []).map(t => `<span class="inline-block bg-[#FFF0F3] text-yuru-sub border border-[#F2D5D9] text-[9px] px-1.5 py-0.5 rounded-full">#${t}</span>`).join('');
+                            
+                            li.innerHTML = `
+                                <div class="mb-2 flex items-center justify-between">
+                                    <span class="text-[10px] font-bold text-yuru-main bg-yuru-main/10 px-1.5 py-0.5 rounded">${c.customerCode}</span>
+                                    <span class="text-[9px] text-yuru-sub">前回:${lastVisitText}</span>
+                                </div>
+                                <div class="font-bold text-yuru-text text-sm mb-1.5 truncate">${c.displayName || '名前未設定'} 様</div>
+                                ${c.preferenceMemo ? `<div class="text-[10px] text-yuru-text mb-1.5 line-clamp-2 leading-tight flex-1"><span class="text-yuru-main font-bold">好み:</span> ${c.preferenceMemo}</div>` : '<div class="flex-1"></div>'}
+                                ${c.cautionMemo ? `<div class="text-[9px] text-yuru-alert font-bold bg-yuru-alert/10 px-1.5 py-0.5 rounded mt-auto mb-1.5 truncate w-full">⚠ ${c.cautionMemo}</div>` : ''}
+                                <div class="flex flex-wrap gap-1 mt-auto h-4 overflow-hidden opacity-80">${tagsHtmlGrid}</div>
+                            `;
+                        }
+                        
                         listEl.appendChild(li);
                     });
                 }
