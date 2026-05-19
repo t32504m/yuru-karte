@@ -72,7 +72,10 @@
     <header class="sticky top-0 z-40 bg-yuru-bg/90 backdrop-blur-md shadow-sm border-b border-yuru-border">
         <div class="max-w-md mx-auto px-4 py-3 flex justify-between items-center">
             <h1 class="text-xl font-bold text-yuru-main flex items-center gap-2 select-none cursor-pointer" onclick="App.navigate('home')">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 6l10-4 10 4M2 6v12l10 4 10-4V6M12 2v20"/></svg>
+                <!-- サロンらしい手モチーフのアイコン -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                </svg>
                 ゆるカルテ
             </h1>
             <div class="flex gap-2" id="header-actions">
@@ -81,7 +84,7 @@
                     データ
                 </button>
                 <button onclick="App.navigate('customer-form')" class="text-sm bg-yuru-main text-white px-3 py-1.5 rounded-full hover:bg-opacity-90 transition font-bold shadow-sm">
-                    ＋ 顧客追加
+                    ＋ 追加
                 </button>
             </div>
         </div>
@@ -129,7 +132,7 @@
                 </ul>
                 <div id="emptyState" class="hidden text-center py-12">
                     <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" class="mx-auto text-yuru-border mb-3"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
-                    <p class="text-yuru-sub font-medium text-sm">顧客データがありません<br>「＋ 顧客追加」から登録してください</p>
+                    <p class="text-yuru-sub font-medium text-sm">顧客データがありません<br>「＋ 追加」から登録してください</p>
                 </div>
             </div>
         </section>
@@ -202,7 +205,7 @@
             <form id="customerForm" class="bg-white p-5 rounded-2xl shadow-sm border border-yuru-border space-y-4">
                 <input type="hidden" id="c_id">
 
-                <div class="bg-yuru-bg p-3 rounded-xl border border-yuru-main/20">
+                <div class="bg-[#FFF0F3] p-3 rounded-xl border border-[#F2D5D9]">
                     <label class="yuru-label flex items-center gap-1">顧客ID・番号 <span class="text-yuru-alert">*</span></label>
                     <input type="text" id="c_code" required placeholder="例: 001" class="yuru-input bg-white">
                     <p class="text-[10px] text-yuru-sub mt-1">※この項目のみ必須です。</p>
@@ -576,7 +579,7 @@
                 currentCustomerId: null,
                 searchQuery: '',
                 currentTag: 'ALL',
-                viewMode: 'list'
+                viewMode: 'list' // デフォルトはリスト表示
             },
 
             async init() {
@@ -682,9 +685,9 @@
                 listEl.innerHTML = '';
                 
                 if (this.state.viewMode === 'list') {
-                    listEl.className = 'space-y-3 pb-10';
+                    listEl.className = 'space-y-3 pb-10 block';
                 } else {
-                    listEl.className = 'grid grid-cols-2 gap-3 space-y-0 pb-10';
+                    listEl.className = 'grid grid-cols-2 gap-3 pb-10';
                 }
 
                 if (filtered.length === 0) {
@@ -701,11 +704,12 @@
                             li.className = 'bg-white rounded-2xl shadow-sm border border-yuru-border p-4 transition active:bg-[#FFF0F3] cursor-pointer';
                             li.onclick = () => this.navigate('customer-detail', { id: c.id });
                             
+                            // 1列表示: IDを大きく(text-xl)、名前を小さく(text-sm)
                             li.innerHTML = `
                                 <div class="flex justify-between items-start mb-2">
-                                    <div>
-                                        <span class="text-xs font-bold text-yuru-main bg-yuru-main/10 px-2 py-0.5 rounded mr-2">${c.customerCode}</span>
-                                        <span class="font-bold text-yuru-text text-base">${c.displayName || '名前未設定'} 様</span>
+                                    <div class="flex items-baseline gap-2 overflow-hidden">
+                                        <span class="text-xl font-bold text-yuru-main leading-tight flex-shrink-0">${c.customerCode}</span>
+                                        <span class="text-sm font-bold text-yuru-text truncate">${c.displayName || '名前未設定'} 様</span>
                                     </div>
                                 </div>
                                 ${c.preferenceMemo ? `<div class="text-xs text-yuru-text mb-2 line-clamp-1"><span class="text-yuru-main font-bold">好み:</span> ${c.preferenceMemo}</div>` : ''}
@@ -716,17 +720,18 @@
                                 </div>
                             `;
                         } else {
-                            li.className = 'bg-white rounded-2xl shadow-sm border border-yuru-border p-3 transition active:bg-[#FFF0F3] cursor-pointer flex flex-col h-full';
+                            li.className = 'bg-white rounded-2xl shadow-sm border border-yuru-border p-3 transition active:bg-[#FFF0F3] cursor-pointer flex flex-col h-full overflow-hidden';
                             li.onclick = () => this.navigate('customer-detail', { id: c.id });
                             
                             const tagsHtmlGrid = (c.tags || []).map(t => `<span class="inline-block bg-[#FFF0F3] text-yuru-sub border border-[#F2D5D9] text-[9px] px-1.5 py-0.5 rounded-full">#${t}</span>`).join('');
                             
+                            // 2列表示: IDを大きく(text-lg)、名前を小さく(text-xs)。折り返しを制御。
                             li.innerHTML = `
-                                <div class="mb-2 flex items-center justify-between">
-                                    <span class="text-[10px] font-bold text-yuru-main bg-yuru-main/10 px-1.5 py-0.5 rounded">${c.customerCode}</span>
-                                    <span class="text-[9px] text-yuru-sub">前回:${lastVisitText}</span>
+                                <div class="mb-1 flex items-baseline justify-between gap-1 overflow-hidden">
+                                    <span class="text-lg font-bold text-yuru-main leading-tight truncate">${c.customerCode}</span>
+                                    <span class="text-[9px] text-yuru-sub flex-shrink-0">前回:${lastVisitText}</span>
                                 </div>
-                                <div class="font-bold text-yuru-text text-sm mb-1.5 truncate">${c.displayName || '名前未設定'} 様</div>
+                                <div class="font-bold text-yuru-text text-xs mb-1.5 truncate">${c.displayName || '名前未設定'} 様</div>
                                 ${c.preferenceMemo ? `<div class="text-[10px] text-yuru-text mb-1.5 line-clamp-2 leading-tight flex-1"><span class="text-yuru-main font-bold">好み:</span> ${c.preferenceMemo}</div>` : '<div class="flex-1"></div>'}
                                 ${c.cautionMemo ? `<div class="text-[9px] text-yuru-alert font-bold bg-yuru-alert/10 px-1.5 py-0.5 rounded mt-auto mb-1.5 truncate w-full">⚠ ${c.cautionMemo}</div>` : ''}
                                 <div class="flex flex-wrap gap-1 mt-auto h-4 overflow-hidden opacity-80">${tagsHtmlGrid}</div>
@@ -748,7 +753,7 @@
                 document.getElementById('btnAddAppt').onclick = () => this.navigate('appointment-form');
 
                 // Basic Info
-                const tagsHtml = (c.tags || []).map(t => `<span class="inline-block bg-yuru-bg text-yuru-sub border border-yuru-sub/20 text-[10px] px-2 py-0.5 rounded-full mr-1 mb-1">#${t}</span>`).join('');
+                const tagsHtml = (c.tags || []).map(t => `<span class="inline-block bg-[#FFF0F3] text-yuru-sub border border-[#F2D5D9] text-[10px] px-2 py-0.5 rounded-full mr-1 mb-1">#${t}</span>`).join('');
                 document.getElementById('detailBasicCard').innerHTML = `
                     <div class="mb-3">
                         <span class="text-xs font-bold text-yuru-main bg-yuru-main/10 px-2 py-0.5 rounded mr-2">${c.customerCode}</span>
@@ -760,7 +765,7 @@
                     
                     <div class="space-y-3 text-sm">
                         ${c.preferenceMemo ? `
-                            <div class="bg-yuru-bg p-3 rounded-xl">
+                            <div class="bg-yuru-bg p-3 rounded-xl border border-yuru-border/50">
                                 <span class="block text-[10px] font-bold text-yuru-main mb-1">施術の好み</span>
                                 <span class="text-yuru-text font-medium">${c.preferenceMemo.replace(/\n/g, '<br>')}</span>
                             </div>` : ''}
@@ -792,7 +797,7 @@
                                 <div class="font-bold text-yuru-text text-lg">${formatted}</div>
                                 <div class="text-sm font-bold text-yuru-main mt-1">
                                     ${upcoming.courseCode ? upcoming.courseCode : ''}
-                                    ${upcoming.durationMinutes ? ` <span class="text-xs text-yuru-sub bg-yuru-bg px-1 rounded">${upcoming.durationMinutes}分</span>` : ''}
+                                    ${upcoming.durationMinutes ? ` <span class="text-xs text-yuru-sub bg-yuru-bg px-1 rounded border border-[#F2D5D9]">${upcoming.durationMinutes}分</span>` : ''}
                                 </div>
                                 ${upcoming.memo ? `<div class="text-xs text-yuru-text mt-1 opacity-80">${upcoming.memo}</div>` : ''}
                             </div>
@@ -816,7 +821,7 @@
                         const isLatest = idx === 0;
                         const d = new Date(v.visitedAt);
                         const pMap = { soft: '弱め', normal: '普通', strong: '強め', veryStrong: 'ゴリゴリ' };
-                        const focusHtml = (v.focusAreas||[]).map(f => `<span class="text-[10px] bg-yuru-bg px-1.5 py-0.5 rounded text-yuru-sub mr-1">重点: ${f}</span>`).join('');
+                        const focusHtml = (v.focusAreas||[]).map(f => `<span class="text-[10px] bg-yuru-bg border border-[#F2D5D9] px-1.5 py-0.5 rounded text-yuru-sub mr-1">重点: ${f}</span>`).join('');
                         
                         let courseDisplay = '';
                         if(v.courseCode) courseDisplay += v.courseCode;
@@ -833,7 +838,7 @@
                                     <span class="font-bold text-sm text-yuru-text">${d.getFullYear()}/${d.getMonth()+1}/${d.getDate()}</span>
                                     ${courseDisplay ? `<span class="text-xs font-bold text-yuru-main bg-yuru-main/10 px-2 py-0.5 rounded">${courseDisplay}</span>` : ''}
                                 </div>
-                                <div class="mb-2 flex flex-wrap gap-1">${focusHtml} <span class="text-[10px] bg-yuru-bg px-1.5 py-0.5 rounded text-yuru-sub">強さ: ${pMap[v.pressurePreference]||'-'}</span></div>
+                                <div class="mb-2 flex flex-wrap gap-1">${focusHtml} <span class="text-[10px] bg-yuru-bg border border-[#F2D5D9] px-1.5 py-0.5 rounded text-yuru-sub">強さ: ${pMap[v.pressurePreference]||'-'}</span></div>
                                 ${v.treatmentMemo ? `<p class="text-xs text-yuru-text line-clamp-3 mb-2">${v.treatmentMemo.replace(/\n/g, '<br>')}</p>` : ''}
                                 ${v.conversationMemo ? `<p class="text-[10px] text-yuru-sub border-t border-yuru-border pt-1 mt-1 line-clamp-1">💬 ${v.conversationMemo}</p>` : ''}
                             </div>
@@ -969,7 +974,7 @@
 
             async saveVisit(e) {
                 e.preventDefault();
-                
+
                 // バリデーションチェック (時間)
                 const durationInput = document.getElementById('v_duration').value;
                 let durationMinutes = null;
@@ -1044,7 +1049,6 @@
             async deleteCustomer(id) {
                 if(!confirm('本当に削除しますか？\n（関連する履歴や予約も論理的には残り見えなくなります）')) return;
                 await DB.delete('customers', id);
-                // 関連データも消すのが丁寧だが今回はシンプルに本体のみ削除
                 this.navigate('home');
             },
             async deleteVisit(id) {
@@ -1086,7 +1090,7 @@
                 COMMON_TAGS.forEach(t => {
                     const btn = document.createElement('button');
                     btn.type = 'button';
-                    btn.className = 'text-[10px] bg-yuru-bg border border-yuru-border text-yuru-sub px-2 py-1 rounded-full hover:bg-yuru-sub hover:text-white transition';
+                    btn.className = 'text-[10px] bg-[#FFF0F3] border border-[#F2D5D9] text-yuru-text px-2 py-1 rounded-full hover:bg-yuru-main hover:text-white transition shadow-sm';
                     btn.textContent = '+' + t;
                     btn.onclick = () => this.appendInputCommaStr('c_tags', t);
                     cHints.appendChild(btn);
@@ -1096,7 +1100,7 @@
                 COMMON_FOCUS.forEach(t => {
                     const btn = document.createElement('button');
                     btn.type = 'button';
-                    btn.className = 'text-[10px] bg-yuru-bg border border-yuru-border text-yuru-sub px-2 py-1 rounded-full hover:bg-yuru-main hover:text-white transition';
+                    btn.className = 'text-[10px] bg-[#FFF0F3] border border-[#F2D5D9] text-yuru-text px-2 py-1 rounded-full hover:bg-yuru-main hover:text-white transition shadow-sm';
                     btn.textContent = '+' + t;
                     btn.onclick = () => this.appendInputCommaStr('v_focus', t);
                     vHints.appendChild(btn);
